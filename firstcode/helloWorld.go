@@ -1,4 +1,4 @@
-package firstcode
+package main
 
 import "fmt"
 
