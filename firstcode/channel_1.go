@@ -17,7 +17,7 @@ import (
 	3。有序性，控制操作的执行顺序
 */
 //<-ch 忽略接收数据，仅用于并发同步
-func main() {
+func Channel1() {
 	//1.channel通道，通过<- ch 忽略接收数据，仅用于并发同步
 	ch := make(chan int)
 	go func() {
