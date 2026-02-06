@@ -23,12 +23,18 @@ func handleSession(conn net.Conn, exitChan chan int) {
 		if err == nil {
 			//去掉字符串末尾的回车
 			str = strings.TrimSpace(str)
-			//处理Telnet命令
+			/*
+				处理Telnet命令，即输入特定命令进行特定操作
+					@close 退出当前连接会话
+					@shutdown 终止服务器运行
+			*/
 			if !processTelnetCommand(str, exitChan) {
 				conn.Close()
+				fmt.Println("Conn closed")
 				break
 			}
-			//Echo逻辑，发什么数据，就返回什么数据
+			//Echo逻辑（回显逻辑），发什么数据，就返回什么数据
+			//在conn写，即  服务器->客户端
 			conn.Write([]byte(str + "\r\n"))
 		} else {
 			fmt.Println("Session closed")

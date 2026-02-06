@@ -2,6 +2,10 @@ package main
 
 import "os"
 
+/*
+tcp回音服务器
+接收请求server，处理会话handleSession，
+*/
 func main() {
 	exitChan := make(chan int)
 	go server("127.0.0.1:7001", exitChan)

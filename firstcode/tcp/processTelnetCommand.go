@@ -11,8 +11,8 @@ import (
 @shutdown 终止服务器运行
 */
 func processTelnetCommand(str string, exitChan chan int) bool {
-	//1."@close"指令表示终止本次会话
-	//2."@shutdown"指令表示终止服务器运行
+	//1."@close"指令表示终止本次会话->关闭conn
+	//2."@shutdown"指令表示终止服务器运行->退出程序
 	//strings.HasPrefix(s, prefix string)bool{} 判断s是否以prefix开头
 	if strings.HasPrefix(str, "@close") {
 		fmt.Println("Session closed")
