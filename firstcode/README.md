@@ -1,0 +1,1 @@
+firstCode是写并发代码的，从goroutine -> channel -> select -> sync.Mutex ->sync.RWMutex -> sync.WaitGroup
