@@ -89,6 +89,51 @@ func fanInProcess(outputCh chan<- order, ProducerID int) {
 	}
 }
 
+// 4.Pipeline模式L:订单处理流水线
+func validationStage(input <-chan order) <-chan order {
+	output := make(chan order, 10)
+	go func() {
+		//1.检验订单
+		defer close(output)
+		for order := range input {
+			if order.price > 0 {
+				order.status = "validated"
+				fmt.Printf("订单已检验，订单ID为%d\n", order.ID)
+				output <- order
+			} else {
+				fmt.Printf("订单校验失败，ID为%d\n", order.ID)
+			}
+		}
+	}()
+	return output
+}
+func paymentStage(input <-chan order) <-chan order {
+	output := make(chan order, 10)
+	go func() {
+		defer close(output)
+		//2.支付
+		for order := range input {
+			order.status = "paid"
+			fmt.Printf("订单已支付，订单ID为%d\n", order.ID)
+			output <- order
+		}
+	}()
+	return output
+}
+func shippingStage(input <-chan order) <-chan order {
+	output := make(chan order, 10)
+	go func() {
+		defer close(output)
+		//3.配送
+		for order := range input {
+			order.status = "shipped"
+			fmt.Printf("订单已配送，订单ID为%d\n", order.ID)
+			output <- order
+		}
+	}()
+	return output
+}
+
 func main() {
 	//orderChan := make(chan order, 3)
 	//var wg sync.WaitGroup
@@ -125,23 +170,51 @@ func main() {
 	//fanwg.Wait()
 
 	//扇入模式
-	fmt.Println("======扇入模式演示======")
-	fanInCh := make(chan order, 10)
+	//fmt.Println("======扇入模式演示======")
+	//fanInCh := make(chan order, 10)
+	//
+	////启动生产者
+	//for i := 0; i < 3; i++ {
+	//	go fanInProcess(fanInCh, i+1)
+	//}
+	//
+	////处理订单
+	//go func() {
+	//	time.Sleep(time.Second * 2)
+	//	close(fanInCh)
+	//}()
+	//
+	//fmt.Println("收集到以下订单：")
+	//for order := range fanInCh {
+	//	fmt.Printf("订单ID为%d,价格为%.2f\n", order.ID, order.price)
+	//}
 
-	//启动生产者
-	for i := 0; i < 3; i++ {
-		go fanInProcess(fanInCh, i+1)
-	}
+	// pipeline模式
+	fmt.Println("======pipeline模式演示======")
+	pipeline := make(chan order, 10)
 
-	//处理订单
+	validation := validationStage(pipeline)
+	payment := paymentStage(validation)
+	shipping := shippingStage(payment)
+
+	//发送测试数据
 	go func() {
-		time.Sleep(time.Second * 2)
-		close(fanInCh)
+		for i := 0; i < 3; i++ {
+			Order := order{
+				ID:       i + 1,
+				UserID:   rand.Intn(1000),
+				price:    rand.Float64() * 1000,
+				status:   "new",
+				createAt: time.Now(),
+			}
+			pipeline <- Order
+		}
+		close(pipeline)
 	}()
 
-	fmt.Println("收集到以下订单：")
-	for order := range fanInCh {
-		fmt.Printf("订单ID为%d,价格为%.2f\n", order.ID, order.price)
+	//打印结果
+	for order := range shipping {
+		fmt.Printf("%d号订单已完成，状态为%s\n", order.ID, order.status)
 	}
 
 }
