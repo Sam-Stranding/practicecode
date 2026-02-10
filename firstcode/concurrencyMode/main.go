@@ -48,16 +48,60 @@ func OrderConsume(orderChan <-chan order, wg *sync.WaitGroup) {
 	}
 }
 
+/*
+2.扇出模式，一个订单"流"分发给多个处理器，重点在"多个处理器"，让处理器并发执行
+*/
+func fanoutProcess(inputChan <-chan order, workID int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for order := range inputChan {
+		switch workID {
+		//workID: 1, 向商家，客户发送订单,如订单ID,价格
+		case 1:
+			fmt.Printf("订单ID为%d,价格为%.2f\n", order.ID, order.price)
+		//workID: 2, 计算订单价格
+		case 2:
+			discounts := order.price * 0.8
+			fmt.Printf("订单价格为: %.2f\n", discounts)
+		//workID: 3, 写入数据库
+		case 3:
+			fmt.Println("订单已写入数据库")
+		}
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
 func main() {
-	orderChan := make(chan order, 5)
-	var wg sync.WaitGroup
+	//orderChan := make(chan order, 3)
+	//var wg sync.WaitGroup
 
-	//启动消费者(可以有多个消费者)
-	wg.Add(2)
-	go OrderConsume(orderChan, &wg)
-	go OrderConsume(orderChan, &wg)
-
+	////启动消费者(可以有多个消费者)
+	//wg.Add(2)
+	//go OrderConsume(orderChan, &wg)
+	//go OrderConsume(orderChan, &wg)
+	//
 	//启动生产者
-	go OrderProduce(orderChan, 8)
-	wg.Wait()
+	//go OrderProduce(orderChan, 1)
+	//wg.Wait()
+
+	//扇出模式
+	fmt.Println("======扇出模式演示======")
+	inputChan := make(chan order, 10)
+	var fanwg sync.WaitGroup
+
+	fanwg.Add(3)
+	for i := 0; i < 3; i++ {
+		go fanoutProcess(inputChan, i+1, &fanwg)
+	}
+
+	//生成数据
+	go func() {
+		for i := 0; i < 6; i++ {
+			inputChan <- order{ID: i + 1, price: rand.Float64() * 1000}
+			time.Sleep(time.Millisecond * 100)
+		}
+		//需要及时关闭channel,因为fanoutProcess()中使用了for range遍历channel，如果不关闭，goroutine会阻塞在range上
+		close(inputChan)
+	}()
+
+	fanwg.Wait()
 }
