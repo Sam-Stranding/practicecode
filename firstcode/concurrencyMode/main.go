@@ -70,6 +70,25 @@ func fanoutProcess(inputChan <-chan order, workID int, wg *sync.WaitGroup) {
 	}
 }
 
+/*
+3.扇入模式，多个数据源合并 -> 多个生产者，由主goroutine收集订单
+*/
+func fanInProcess(outputCh chan<- order, ProducerID int) {
+	defer fmt.Printf("生产者%d号生产订单")
+	for i := 0; i < 3; i++ {
+		Order := order{
+			ID:       ProducerID*1000 + i + 1,
+			UserID:   rand.Intn(1000),
+			price:    rand.Float64() * 1000,
+			status:   "new",
+			createAt: time.Now(),
+		}
+		outputCh <- Order
+		fmt.Printf("生产者%d生产订单%d号，价格为%.2f\n", ProducerID, Order.ID, Order.price)
+		time.Sleep(time.Millisecond * 100)
+	}
+}
+
 func main() {
 	//orderChan := make(chan order, 3)
 	//var wg sync.WaitGroup
@@ -84,24 +103,45 @@ func main() {
 	//wg.Wait()
 
 	//扇出模式
-	fmt.Println("======扇出模式演示======")
-	inputChan := make(chan order, 10)
-	var fanwg sync.WaitGroup
+	//fmt.Println("======扇出模式演示======")
+	//inputChan := make(chan order, 10)
+	//var fanwg sync.WaitGroup
+	//
+	//fanwg.Add(3)
+	//for i := 0; i < 3; i++ {
+	//	go fanoutProcess(inputChan, i+1, &fanwg)
+	//}
+	//
+	////生成数据
+	//go func() {
+	//	for i := 0; i < 6; i++ {
+	//		inputChan <- order{ID: i + 1, price: rand.Float64() * 1000}
+	//		time.Sleep(time.Millisecond * 100)
+	//	}
+	//	//需要及时关闭channel,因为fanoutProcess()中使用了for range遍历channel，如果不关闭，goroutine会阻塞在range上
+	//	close(inputChan)
+	//}()
+	//
+	//fanwg.Wait()
 
-	fanwg.Add(3)
+	//扇入模式
+	fmt.Println("======扇入模式演示======")
+	fanInCh := make(chan order, 10)
+
+	//启动生产者
 	for i := 0; i < 3; i++ {
-		go fanoutProcess(inputChan, i+1, &fanwg)
+		go fanInProcess(fanInCh, i+1)
 	}
 
-	//生成数据
+	//处理订单
 	go func() {
-		for i := 0; i < 6; i++ {
-			inputChan <- order{ID: i + 1, price: rand.Float64() * 1000}
-			time.Sleep(time.Millisecond * 100)
-		}
-		//需要及时关闭channel,因为fanoutProcess()中使用了for range遍历channel，如果不关闭，goroutine会阻塞在range上
-		close(inputChan)
+		time.Sleep(time.Second * 2)
+		close(fanInCh)
 	}()
 
-	fanwg.Wait()
+	fmt.Println("收集到以下订单：")
+	for order := range fanInCh {
+		fmt.Printf("订单ID为%d,价格为%.2f\n", order.ID, order.price)
+	}
+
 }
