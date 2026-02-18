@@ -2,6 +2,8 @@
 
 ## 1.启动实例
 
+
+
 ## 2.服务端详解
 
 #### （1）Server
@@ -36,7 +38,7 @@ type Handler interface{
 }
 ```
 
-####  （3）ServeMux
+#### （3）ServeMux
 
 ServeMux是对Handler的具体实现，内部有一个map，维护从path到handler的映射关系
 
@@ -72,5 +74,3 @@ type routingIndex struct {
 ```
 
 ## 3.客户端详解
-
-
